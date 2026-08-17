@@ -16,11 +16,11 @@ Run the backend first (in ../salt-bread-quant):
 cargo run                    # or: MOCK_SOURCES=1 cargo run  (simulated data)
 ```
 
-Then:
+Then (this repo uses [Bun](https://bun.sh)):
 
 ```bash
-npm install
-npm run dev                  # http://localhost:5173 (proxies /api and /ws to :8080)
+bun install
+bun run dev                  # http://localhost:5173 (proxies /api and /ws to :8080)
 ```
 
 ## How data flows
@@ -33,8 +33,8 @@ polling anywhere in the client.
 ## Build / Docker
 
 ```bash
-npm run build                # type-check + production bundle in dist/
-docker build -t sourdough-milk-quant .
+bun run build                # type-check + production bundle in dist/
+docker build -t sourdough-milk-quant .   # Bun build stage + nginx runtime
 ```
 
 The image serves the static build with nginx and proxies `/api` + `/ws` to

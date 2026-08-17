@@ -16,6 +16,9 @@ export interface Instrument {
   low?: number
   volume?: number
   delayed?: boolean
+  /** exchange grouping: US | IDX | INDEX */
+  market?: string
+  currency?: string
   source: string
   ts: number
   /** rolling price history for sparklines */

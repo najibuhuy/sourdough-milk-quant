@@ -1,17 +1,20 @@
 import { useMarket } from '../state/store'
-import { TickerCard } from '../components/TickerCard'
+import { CryptoSpotlight } from '../components/CryptoSpotlight'
 import { NewsFeed } from '../components/NewsFeed'
 import { StockTable } from '../components/StockTable'
 import { PairPicker } from '../components/PairPicker'
 
 export function Home() {
-  const { crypto, stocks, news } = useMarket()
-  const cryptoList = Object.values(crypto).sort((a, b) =>
-    a.symbol.localeCompare(b.symbol),
-  )
-  const stockList = Object.values(stocks).sort((a, b) =>
-    a.symbol.localeCompare(b.symbol),
-  )
+  const { stocks, news } = useMarket()
+  const stockList = Object.values(stocks).sort((a, b) => {
+    const ma = a.market ?? 'US'
+    const mb = b.market ?? 'US'
+    if (ma !== mb) return ma === 'IDX' ? -1 : mb === 'IDX' ? 1 : 0
+    // index first within a market, then alphabetical
+    const ia = a.symbol.startsWith('^') ? 0 : 1
+    const ib = b.symbol.startsWith('^') ? 0 : 1
+    return ia - ib || a.symbol.localeCompare(b.symbol)
+  })
 
   return (
     <>
@@ -21,23 +24,12 @@ export function Home() {
         news update as sources publish.
       </p>
 
-      <div className="ticker-row">
-        {cryptoList.length === 0
-          ? [...Array(3)].map((_, i) => (
-              <div key={i} className="card ticker-card">
-                <div className="skeleton" style={{ width: '40%' }} />
-                <div className="skeleton" style={{ width: '70%', height: 24 }} />
-                <div className="skeleton" style={{ width: '100%', height: 36 }} />
-              </div>
-            ))
-          : cryptoList.map((c) => <TickerCard key={c.symbol} inst={c} />)}
-      </div>
-
       <div className="home-grid">
         <div className="home-col">
           <NewsFeed items={news} />
         </div>
         <div className="home-col">
+          <CryptoSpotlight />
           <PairPicker />
           <StockTable stocks={stockList} />
         </div>

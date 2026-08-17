@@ -124,17 +124,10 @@ a { color: inherit; }
   vertical-align: 1px;
 }
 
-/* ---------- home grid ---------- */
-.ticker-row {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 14px;
-  margin-bottom: 18px;
-}
-
+/* ---------- home grid: news-first, market rail on the right ---------- */
 .home-grid {
   display: grid;
-  grid-template-columns: minmax(340px, 5fr) minmax(300px, 4fr);
+  grid-template-columns: minmax(380px, 7fr) minmax(320px, 5fr);
   gap: 18px;
   align-items: start;
 }
@@ -165,8 +158,26 @@ a { color: inherit; }
 .delta-down { color: var(--down); }
 .delta-flat { color: var(--text-muted); }
 
+/* ---------- crypto spotlight ---------- */
+.spotlight-price {
+  font-size: 32px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  transition: color 300ms;
+}
+.spotlight-range { color: var(--text-muted); font-weight: 400; }
+.crypto-select {
+  background: var(--surface-2);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 8px;
+  font-size: 13px;
+  font-family: var(--font);
+}
+
 /* ---------- news ---------- */
-.news-list { display: flex; flex-direction: column; max-height: 640px; overflow-y: auto; }
+.news-list { display: flex; flex-direction: column; max-height: 1080px; overflow-y: auto; }
 .news-item {
   padding: 10px 2px;
   border-bottom: 1px solid var(--grid);
@@ -203,6 +214,15 @@ a { color: inherit; }
 }
 .table tr:last-child td { border-bottom: none; }
 .table .num { text-align: right; }
+.table .market-head {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  padding-top: 12px;
+  border-bottom: 1px solid var(--baseline);
+}
 
 /* ---------- pair picker ---------- */
 .pair-row { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }

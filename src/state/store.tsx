@@ -9,7 +9,7 @@ import type { Envelope, ForexRate, Instrument, NewsItem } from '../lib/types'
 import { wsUrl } from '../lib/api'
 
 const HISTORY_LEN = 120
-const NEWS_LEN = 80
+const NEWS_LEN = 150
 
 export interface MarketState {
   connected: boolean
@@ -55,6 +55,8 @@ function upsertInstrument(
     low: Number(d['low'] ?? prev?.low ?? NaN) || prev?.low,
     volume: Number(d['volume'] ?? prev?.volume ?? NaN) || prev?.volume,
     delayed: Boolean(d['delayed'] ?? prev?.delayed ?? false),
+    market: (d['market'] as string | undefined) ?? prev?.market,
+    currency: (d['currency'] as string | undefined) ?? prev?.currency,
     source: env.source,
     ts: env.ts,
     history: pushHistory(prev?.history ?? [], price),

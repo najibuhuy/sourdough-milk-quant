@@ -1,10 +1,10 @@
-# ---- build stage ----
-FROM node:22-alpine AS builder
+# ---- build stage (Bun) ----
+FROM oven/bun:1 AS builder
 WORKDIR /app
-COPY package.json package-lock.json* ./
-RUN npm ci || npm install
+COPY package.json bun.lock* ./
+RUN bun install --frozen-lockfile || bun install
 COPY . .
-RUN npm run build
+RUN bun run build
 
 # ---- runtime stage: nginx serves static build and proxies /api + /ws ----
 FROM nginx:alpine
