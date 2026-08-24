@@ -1,8 +1,10 @@
 import { useMarket } from '../state/store'
 import { CryptoSpotlight } from '../components/CryptoSpotlight'
+import { CommoditySpotlight } from '../components/CommoditySpotlight'
 import { NewsFeed } from '../components/NewsFeed'
 import { StockTable } from '../components/StockTable'
 import { PairPicker } from '../components/PairPicker'
+import { EconomicCalendar } from '../components/EconomicCalendar'
 
 export function Home() {
   const { stocks, news } = useMarket()
@@ -28,9 +30,11 @@ export function Home() {
         <div className="home-col">
           <NewsFeed items={news} />
         </div>
-        <div className="home-col">
+        <div className="home-rail">
           <CryptoSpotlight />
+          <CommoditySpotlight />
           <PairPicker />
+          <EconomicCalendar />
           <StockTable stocks={stockList} />
         </div>
       </div>

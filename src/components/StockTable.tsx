@@ -1,4 +1,5 @@
 import { Fragment } from 'react'
+import { useNavigate } from 'react-router-dom'
 import type { Instrument } from '../lib/types'
 import { fmtPrice, fmtPct } from '../lib/format'
 
@@ -13,12 +14,20 @@ const MARKET_LABELS: Record<string, string> = {
 }
 
 function Row({ s }: { s: Instrument }) {
+  const navigate = useNavigate()
   const dir =
     s.changePct > 0.005 ? 'up' : s.changePct < -0.005 ? 'down' : 'flat'
   const cls =
     dir === 'up' ? 'delta-up' : dir === 'down' ? 'delta-down' : 'delta-flat'
+  const group = ['IDX', 'INDEX'].includes(s.market ?? '') ? 'idx' : 'us'
+  const analyze = () =>
+    navigate(`/statistics?group=${group}&symbol=${encodeURIComponent(s.symbol)}`)
   return (
-    <tr>
+    <tr
+      className="clickable-row"
+      onClick={analyze}
+      title={`Analyse ${s.symbol} in Statistics`}
+    >
       <td style={{ fontWeight: 600 }}>
         {DISPLAY_NAMES[s.symbol] ?? s.symbol.replace(/\.JK$/, '')}
         {s.symbol.endsWith('.JK') && (

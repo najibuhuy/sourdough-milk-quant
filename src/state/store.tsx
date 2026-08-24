@@ -15,6 +15,8 @@ export interface MarketState {
   connected: boolean
   crypto: Record<string, Instrument>
   stocks: Record<string, Instrument>
+  /** commodities/metals (gold, silver, oil…) — market === 'COMMODITY' */
+  commodities: Record<string, Instrument>
   forex: Record<string, ForexRate>
   news: NewsItem[]
 }
@@ -23,6 +25,7 @@ const initial: MarketState = {
   connected: false,
   crypto: {},
   stocks: {},
+  commodities: {},
   forex: {},
   news: [],
 }
@@ -56,6 +59,7 @@ function upsertInstrument(
     volume: Number(d['volume'] ?? prev?.volume ?? NaN) || prev?.volume,
     delayed: Boolean(d['delayed'] ?? prev?.delayed ?? false),
     market: (d['market'] as string | undefined) ?? prev?.market,
+    name: (d['name'] as string | undefined) ?? prev?.name,
     currency: (d['currency'] as string | undefined) ?? prev?.currency,
     source: env.source,
     ts: env.ts,
@@ -73,8 +77,19 @@ function reducer(state: MarketState, action: Action): MarketState {
     case 'ticker':
       return { ...state, crypto: upsertInstrument(state.crypto, env) }
     case 'stock':
-    case 'stock_trade':
+    case 'stock_trade': {
+      // Commodities (gold/silver/oil) arrive as stock envelopes tagged
+      // market:COMMODITY — route them to their own map so they surface in the
+      // dedicated commodity card, not the stocks table.
+      const market =
+        (env.data['market'] as string | undefined) ??
+        state.commodities[env.symbol]?.market ??
+        state.stocks[env.symbol]?.market
+      if (market === 'COMMODITY') {
+        return { ...state, commodities: upsertInstrument(state.commodities, env) }
+      }
       return { ...state, stocks: upsertInstrument(state.stocks, env) }
+    }
     case 'forex': {
       const rate = Number(env.data['rate'])
       if (!Number.isFinite(rate)) return state

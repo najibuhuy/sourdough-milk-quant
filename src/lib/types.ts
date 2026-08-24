@@ -16,8 +16,10 @@ export interface Instrument {
   low?: number
   volume?: number
   delayed?: boolean
-  /** exchange grouping: US | IDX | INDEX */
+  /** exchange grouping: US | IDX | INDEX | COMMODITY */
   market?: string
+  /** human-readable name, e.g. "Gold" for XAUUSD (set by commodity feeds) */
+  name?: string
   currency?: string
   source: string
   ts: number
@@ -42,4 +44,42 @@ export interface NewsItem {
   link?: string
   source: string
   published: number
+}
+
+/** One OHLC bar from /api/history. */
+export interface Candle {
+  ts: number
+  open: number
+  high: number
+  low: number
+  close: number
+  volume: number | null
+}
+
+/** An upcoming economic-calendar event from /api/calendar (MACRO_SOURCE). */
+export interface EconEvent {
+  title: string
+  country: string
+  impact: 'High' | 'Medium' | 'Low' | string
+  ts: number
+  forecast: string
+  previous: string
+}
+
+/** A journaled prediction (+ its outcome once resolved) from /api/predictions. */
+export interface Prediction {
+  id: number
+  symbol: string
+  group: string
+  method: string
+  verdict: 'bull' | 'bear' | 'neutral'
+  confidence: number | null
+  price_at: number
+  horizon_secs: number
+  made_at: number
+  resolve_at: number
+  resolved: boolean
+  price_after: number | null
+  correct: boolean | null
+  note: string | null
 }

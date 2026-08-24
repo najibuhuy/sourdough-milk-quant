@@ -12,6 +12,19 @@ export function fmtPct(v: number): string {
   return `${sign}${v.toFixed(2)}%`
 }
 
+/** Preferred display order for commodities — gold first. */
+export const COMMODITY_ORDER = [
+  'XAUUSD', 'XAGUSD', 'XPTUSD', 'XPDUSD', 'WTIUSD', 'BRENTUSD', 'NATGAS', 'COPPER',
+]
+
+export function orderCommodities(symbols: string[]): string[] {
+  return [...symbols].sort((a, b) => {
+    const ia = COMMODITY_ORDER.indexOf(a)
+    const ib = COMMODITY_ORDER.indexOf(b)
+    return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib) || a.localeCompare(b)
+  })
+}
+
 export function timeAgo(ts: number): string {
   const s = Math.max(0, (Date.now() - ts) / 1000)
   if (s < 60) return 'just now'
