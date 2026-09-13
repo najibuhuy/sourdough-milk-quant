@@ -4,8 +4,9 @@ import { useMarket } from '../state/store'
 import { fetchHistory, createPrediction } from '../lib/api'
 import { METHODS, methodByKey, type MethodResult } from '../lib/indicators'
 import type { Candle, Instrument } from '../lib/types'
-import { fmtPrice, timeAgo, orderCommodities } from '../lib/format'
+import { fmtPrice, fmtCompact, timeAgo, orderCommodities } from '../lib/format'
 import { PriceChart } from '../components/PriceChart'
+import { VolumeBars } from '../components/VolumeBars'
 
 type GroupKey = 'us' | 'idx' | 'crypto' | 'commodity'
 
@@ -141,6 +142,11 @@ export function Statistics() {
 
   const lastClose = candles.length ? candles[candles.length - 1].close : undefined
 
+  // buying vs selling pressure: volume on up-days vs down-days (proxy for order flow)
+  const buyVol = candles.reduce((s, c) => s + (c.close >= c.open ? c.volume ?? 0 : 0), 0)
+  const sellVol = candles.reduce((s, c) => s + (c.close < c.open ? c.volume ?? 0 : 0), 0)
+  const totalVol = buyVol + sellVol
+
   return (
     <>
       <h1 className="page-title">Statistics</h1>
@@ -233,6 +239,25 @@ export function Statistics() {
                   ))}
                 </div>
               )}
+              {totalVol > 0 ? (
+                <div className="vol-section">
+                  <div className="vol-head">
+                    <span>Volume · buying vs selling pressure</span>
+                    <span>
+                      <span className="delta-up">▲ {fmtCompact(buyVol)}</span>{' '}
+                      <span className="delta-down">▼ {fmtCompact(sellVol)}</span>
+                    </span>
+                  </div>
+                  <div className="vol-split" title={`${Math.round((buyVol / totalVol) * 100)}% up-day volume`}>
+                    <div className="vol-split-buy" style={{ width: `${(buyVol / totalVol) * 100}%` }} />
+                  </div>
+                  <VolumeBars candles={candles} />
+                  <div className="vol-note">
+                    Up-day volume (green) vs down-day volume (red) — a proxy for order
+                    flow; free data has no true buy/sell tape.
+                  </div>
+                </div>
+              ) : null}
             </>
           )}
         </div>

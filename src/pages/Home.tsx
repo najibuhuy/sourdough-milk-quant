@@ -8,35 +8,48 @@ import { EconomicCalendar } from '../components/EconomicCalendar'
 
 export function Home() {
   const { stocks, news } = useMarket()
-  const stockList = Object.values(stocks).sort((a, b) => {
-    const ma = a.market ?? 'US'
-    const mb = b.market ?? 'US'
-    if (ma !== mb) return ma === 'IDX' ? -1 : mb === 'IDX' ? 1 : 0
-    // index first within a market, then alphabetical
+  const all = Object.values(stocks)
+
+  // index first (^JKSE), then alphabetical
+  const bySym = (a: { symbol: string }, b: { symbol: string }) => {
     const ia = a.symbol.startsWith('^') ? 0 : 1
     const ib = b.symbol.startsWith('^') ? 0 : 1
     return ia - ib || a.symbol.localeCompare(b.symbol)
-  })
+  }
+  const idxStocks = all.filter((s) => ['IDX', 'INDEX'].includes(s.market ?? '')).sort(bySym)
+  const usStocks = all.filter((s) => (s.market ?? 'US') === 'US').sort(bySym)
 
   return (
     <>
       <h1 className="page-title">Home</h1>
       <p className="page-sub">
-        Live markets overview — crypto streams in real time; stocks, forex and
-        news update as sources publish.
+        Live markets overview — crypto streams in real time; commodities, stocks,
+        forex, macro events and news update as sources publish.
       </p>
 
-      <div className="home-grid">
-        <div className="home-col">
-          <NewsFeed items={news} />
-        </div>
-        <div className="home-rail">
-          <CryptoSpotlight />
-          <CommoditySpotlight />
-          <PairPicker />
-          <EconomicCalendar />
-          <StockTable stocks={stockList} />
-        </div>
+      <div className="home-grid6">
+        {/* row 1 — spotlights */}
+        <CommoditySpotlight />
+        <PairPicker />
+        <CryptoSpotlight />
+        {/* row 2 — watchlists + macro */}
+        <StockTable
+          title="IHSG · IDX"
+          group="idx"
+          stocks={idxStocks}
+          hint="Waiting for IHSG quotes… (keyless via Yahoo)"
+        />
+        <StockTable
+          title="S&P 500 · US"
+          group="us"
+          stocks={usStocks}
+          hint="Waiting for US quotes… (set FINNHUB_API_KEY for real-time)"
+        />
+        <EconomicCalendar />
+      </div>
+
+      <div className="home-news">
+        <NewsFeed items={news} />
       </div>
     </>
   )

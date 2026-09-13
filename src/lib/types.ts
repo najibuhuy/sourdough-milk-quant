@@ -56,6 +56,26 @@ export interface Candle {
   volume: number | null
 }
 
+/** A symbol-search hit from /api/search (Yahoo). */
+export interface SymbolSearchResult {
+  symbol: string
+  name: string
+  exchange: string
+  type: string
+}
+
+/** A one-off quote from /api/quote for a searched symbol. */
+export interface Quote {
+  symbol: string
+  price: number
+  prev_close: number | null
+  change_pct: number
+  high: number | null
+  low: number | null
+  currency: string | null
+  delayed: boolean
+}
+
 /** An upcoming economic-calendar event from /api/calendar (MACRO_SOURCE). */
 export interface EconEvent {
   title: string

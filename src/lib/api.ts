@@ -1,4 +1,4 @@
-import type { Candle, EconEvent, Prediction } from './types'
+import type { Candle, EconEvent, Prediction, Quote, SymbolSearchResult } from './types'
 
 const API_BASE = import.meta.env.VITE_API_URL ?? ''
 
@@ -40,6 +40,16 @@ export const fetchPredictions = () =>
 
 export const fetchCalendar = () =>
   getJson<{ ts: number; events: EconEvent[] }>('/api/calendar')
+
+export const fetchSearch = (q: string, group?: string) =>
+  getJson<{ results: SymbolSearchResult[] }>(
+    `/api/search?q=${encodeURIComponent(q)}${group ? `&group=${encodeURIComponent(group)}` : ''}`,
+  )
+
+export const fetchQuote = (symbol: string, group: string) =>
+  getJson<Quote>(
+    `/api/quote?symbol=${encodeURIComponent(symbol)}&group=${encodeURIComponent(group)}`,
+  )
 
 export interface NewPrediction {
   symbol: string

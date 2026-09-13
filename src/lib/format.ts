@@ -12,6 +12,15 @@ export function fmtPct(v: number): string {
   return `${sign}${v.toFixed(2)}%`
 }
 
+/** Compact number (1.2M, 3.4B) for volumes. */
+export function fmtCompact(n: number): string {
+  if (!Number.isFinite(n)) return '—'
+  return new Intl.NumberFormat(undefined, {
+    notation: 'compact',
+    maximumFractionDigits: 1,
+  }).format(n)
+}
+
 /** Preferred display order for commodities — gold first. */
 export const COMMODITY_ORDER = [
   'XAUUSD', 'XAGUSD', 'XPTUSD', 'XPDUSD', 'WTIUSD', 'BRENTUSD', 'NATGAS', 'COPPER',

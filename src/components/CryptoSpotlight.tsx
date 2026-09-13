@@ -72,7 +72,7 @@ export function CryptoSpotlight() {
             : ''}
         </span>
       </div>
-      <Sparkline data={inst.history} direction={dir} height={48} />
+      <Sparkline data={inst.history} direction={dir} height={80} />
       <button
         className="analyze-link"
         onClick={() => navigate(`/statistics?group=crypto&symbol=${active}`)}
