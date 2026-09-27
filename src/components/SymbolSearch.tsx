@@ -8,12 +8,14 @@ interface Props {
   group: Group
   onPick: (r: SymbolSearchResult) => void
   placeholder?: string
+  /** fires on every keystroke so a parent can filter its own list too */
+  onQueryChange?: (q: string) => void
 }
 
 /** Debounced symbol search with an autocomplete dropdown. Results come from the
  *  backend /api/search already filtered to the card's group — the frontend just
  *  renders them. */
-export function SymbolSearch({ group, onPick, placeholder }: Props) {
+export function SymbolSearch({ group, onPick, placeholder, onQueryChange }: Props) {
   const [q, setQ] = useState('')
   const [results, setResults] = useState<SymbolSearchResult[]>([])
   const [open, setOpen] = useState(false)
@@ -53,9 +55,14 @@ export function SymbolSearch({ group, onPick, placeholder }: Props) {
     return () => document.removeEventListener('mousedown', onDoc)
   }, [])
 
+  const change = (v: string) => {
+    setQ(v)
+    onQueryChange?.(v)
+  }
+
   const pick = (r: SymbolSearchResult) => {
     onPick(r)
-    setQ('')
+    change('')
     setResults([])
     setOpen(false)
   }
@@ -65,7 +72,7 @@ export function SymbolSearch({ group, onPick, placeholder }: Props) {
       <input
         className="sym-search-input"
         value={q}
-        onChange={(e) => setQ(e.target.value)}
+        onChange={(e) => change(e.target.value)}
         onFocus={() => results.length > 0 && setOpen(true)}
         placeholder={placeholder ?? 'Search symbol…'}
         aria-label="search symbol"
@@ -81,7 +88,7 @@ export function SymbolSearch({ group, onPick, placeholder }: Props) {
           ))}
         </div>
       )}
-      {loading && q.trim().length >= 2 && open === false && (
+      {loading && q.trim().length >= 2 && !open && (
         <div className="sym-search-hint">searching…</div>
       )}
     </div>

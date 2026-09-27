@@ -1,4 +1,12 @@
-import type { Candle, EconEvent, Prediction, Quote, SymbolSearchResult } from './types'
+import type {
+  Candle,
+  EconEvent,
+  Portfolio,
+  Prediction,
+  Quote,
+  SymbolSearchResult,
+  UniverseItem,
+} from './types'
 
 const API_BASE = import.meta.env.VITE_API_URL ?? ''
 
@@ -74,3 +82,32 @@ export async function createPrediction(
   if (!res.ok) throw new Error(data.error ?? `save failed (${res.status})`)
   return data
 }
+
+// ---- symbol universe + paper trading ----
+
+export const fetchUniverse = (group: string) =>
+  getJson<{ group: string; items: UniverseItem[] }>(
+    `/api/universe?group=${encodeURIComponent(group)}`,
+  )
+
+export const fetchPortfolio = () => getJson<Portfolio>('/api/trade/portfolio')
+
+async function postJson<T>(path: string, body: unknown): Promise<T> {
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error(data.error ?? `${path}: ${res.status}`)
+  return data as T
+}
+
+export const postDeposit = (amount: number, note?: string) =>
+  postJson<{ id: number; amount: number }>('/api/trade/deposit', { amount, note })
+
+export const postOrder = (body: { symbol: string; group: string; side: 'buy' | 'sell'; qty: number }) =>
+  postJson<{ id: number; symbol: string; side: string; qty: number; price: number; total: number }>(
+    '/api/trade/order',
+    body,
+  )

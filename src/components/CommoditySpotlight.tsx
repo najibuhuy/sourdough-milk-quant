@@ -2,26 +2,51 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMarket } from '../state/store'
 import { fmtPrice, fmtPct, orderCommodities } from '../lib/format'
-import type { Instrument } from '../lib/types'
+import { fetchUniverse } from '../lib/api'
+import type { Instrument, UniverseItem } from '../lib/types'
 import { usePinnedQuotes } from '../lib/usePinnedQuotes'
 import { Sparkline } from './Sparkline'
 import { SymbolSearch } from './SymbolSearch'
 
-/** One commodity at a time (gold by default) — big price, delta, day range,
- *  trend. Streamed commodities (kind:stock, market:COMMODITY) plus any the user
- *  searches for (fetched on demand, e.g. wheat ZW=F, an ETF like GLD). */
+/** One commodity at a time (gold by default). The dropdown lists the streamed
+ *  commodities first, then the WHOLE commodity universe (metals, energy, grains,
+ *  softs, livestock) — pick any and it loads on demand. Search also works. */
 export function CommoditySpotlight() {
   const { commodities } = useMarket()
   const navigate = useNavigate()
   const pinned = usePinnedQuotes('commodity')
   const [selected, setSelected] = useState<string | null>(null)
+  const [universe, setUniverse] = useState<UniverseItem[]>([])
+
+  useEffect(() => {
+    let live = true
+    fetchUniverse('commodity')
+      .then((r) => live && setUniverse(r.items))
+      .catch(() => {})
+    return () => {
+      live = false
+    }
+  }, [])
 
   const merged: Record<string, Instrument> = { ...commodities }
   for (const i of pinned.list) merged[i.symbol] = i
-  const symbols = orderCommodities(Object.keys(merged))
+  const liveSymbols = orderCommodities(Object.keys(merged))
+  const liveNames = new Set(
+    Object.values(merged)
+      .map((i) => (i.name ?? '').toLowerCase())
+      .filter(Boolean),
+  )
+  // universe entries not already live (dedupe gold GC=F vs streamed XAUUSD by name)
+  const more = universe.filter((u) => !merged[u.symbol] && !liveNames.has(u.name.toLowerCase()))
 
-  const active = selected && merged[selected] ? selected : symbols[0]
+  const active = selected && merged[selected] ? selected : liveSymbols[0]
   const inst = active ? merged[active] : undefined
+  const pending = selected && !merged[selected] ? selected : null
+
+  const choose = (sym: string) => {
+    setSelected(sym)
+    if (!merged[sym]) pinned.add(sym, universe.find((u) => u.symbol === sym)?.name)
+  }
 
   const prevPrice = useRef<number | null>(null)
   const [flash, setFlash] = useState<'flash-up' | 'flash-down' | ''>('')
@@ -41,18 +66,29 @@ export function CommoditySpotlight() {
       <h3 style={{ margin: 0 }}>
         Commodities<span className="tag">FINANCIAL_SOURCE</span>
       </h3>
-      {symbols.length > 1 && (
+      {(liveSymbols.length > 0 || more.length > 0) && (
         <select
           className="crypto-select"
-          value={active}
-          onChange={(e) => setSelected(e.target.value)}
+          value={selected ?? active ?? ''}
+          onChange={(e) => choose(e.target.value)}
           aria-label="choose commodity"
         >
-          {symbols.map((s) => (
-            <option key={s} value={s}>
-              {merged[s].name ?? s}
-            </option>
-          ))}
+          <optgroup label="Live">
+            {liveSymbols.map((s) => (
+              <option key={s} value={s}>
+                {merged[s].name ?? s}
+              </option>
+            ))}
+          </optgroup>
+          {more.length > 0 && (
+            <optgroup label="All commodities">
+              {more.map((u) => (
+                <option key={u.symbol} value={u.symbol}>
+                  {u.name} · {u.symbol}
+                </option>
+              ))}
+            </optgroup>
+          )}
         </select>
       )}
     </div>
@@ -103,6 +139,7 @@ export function CommoditySpotlight() {
             {' '}×
           </button>
         )}
+        {pending && <span className="spotlight-range"> · loading {pending}…</span>}
       </div>
       <div className={`spotlight-price ${flash}`}>
         {fmtPrice(inst.price)}

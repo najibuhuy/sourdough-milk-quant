@@ -3,6 +3,7 @@ import { MarketProvider, useMarket } from './state/store'
 import { Home } from './pages/Home'
 import { Statistics } from './pages/Statistics'
 import { Learning } from './pages/Learning'
+import { Trade } from './pages/Trade'
 
 function ConnStatus() {
   const { connected } = useMarket()
@@ -18,6 +19,7 @@ const MENUS = [
   { to: '/', label: 'Home', icon: '⌂' },
   { to: '/statistics', label: 'Statistics', icon: '∿' },
   { to: '/learning', label: 'Learning', icon: '✎' },
+  { to: '/trade', label: 'Trade', icon: '⇅' },
 ]
 
 export default function App() {
@@ -48,6 +50,7 @@ export default function App() {
             <Route path="/" element={<Home />} />
             <Route path="/statistics" element={<Statistics />} />
             <Route path="/learning" element={<Learning />} />
+            <Route path="/trade" element={<Trade />} />
           </Routes>
         </main>
       </div>

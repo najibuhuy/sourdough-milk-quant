@@ -2,7 +2,13 @@ import { useCallback, useEffect, useState } from 'react'
 import { fetchQuote } from './api'
 import type { Instrument, Quote } from './types'
 
-function toInstrument(symbol: string, q: Quote, group: string, name?: string): Instrument {
+/** Map a one-off /api/quote into the store's Instrument shape. */
+export function quoteToInstrument(
+  symbol: string,
+  q: Quote,
+  group: string,
+  name?: string,
+): Instrument {
   return {
     symbol,
     price: q.price,
@@ -30,7 +36,9 @@ export function usePinnedQuotes(group: string) {
     (symbol: string, name?: string) => {
       setSymbols((prev) => (prev.includes(symbol) ? prev : [symbol, ...prev]))
       fetchQuote(symbol, group)
-        .then((q) => setQuotes((prev) => ({ ...prev, [symbol]: toInstrument(symbol, q, group, name) })))
+        .then((q) =>
+          setQuotes((prev) => ({ ...prev, [symbol]: quoteToInstrument(symbol, q, group, name) })),
+        )
         .catch(() => {})
     },
     [group],

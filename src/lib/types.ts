@@ -103,3 +103,41 @@ export interface Prediction {
   correct: boolean | null
   note: string | null
 }
+
+/** One entry of the browsable symbol universe from /api/universe. */
+export interface UniverseItem {
+  symbol: string
+  name: string
+}
+
+/** Paper-trading (simulated) portfolio from /api/trade/portfolio. */
+export interface TradePosition {
+  symbol: string
+  group: string
+  qty: number
+  avg_cost: number
+  price: number | null
+  market_value: number | null
+  pnl: number | null
+  pnl_pct: number | null
+}
+
+export interface TradeLedgerRow {
+  id: number
+  kind: 'deposit' | 'withdraw' | 'buy' | 'sell' | string
+  amount: number
+  symbol: string | null
+  group: string | null
+  qty: number | null
+  price: number | null
+  ts: number
+  note: string | null
+}
+
+export interface Portfolio {
+  enabled: boolean
+  cash: number
+  equity: number
+  positions: TradePosition[]
+  ledger: TradeLedgerRow[]
+}
