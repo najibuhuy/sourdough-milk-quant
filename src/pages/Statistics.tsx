@@ -5,6 +5,7 @@ import { fetchHistory, createPrediction } from '../lib/api'
 import { METHODS, methodByKey, type MethodResult } from '../lib/indicators'
 import type { Candle, Instrument } from '../lib/types'
 import { fmtPrice, fmtCompact, timeAgo, orderCommodities } from '../lib/format'
+import { useChartView } from '../lib/useChartView'
 import { PriceChart } from '../components/PriceChart'
 import { VolumeBars } from '../components/VolumeBars'
 
@@ -23,6 +24,26 @@ const HORIZONS = [
   { label: '1 week', secs: 604_800 },
   { label: '1 month', secs: 2_592_000 },
 ]
+
+/** Time-range presets for the chart: a Yahoo `range` paired with the bar
+ *  `interval` that keeps the bar count reasonable (and that Yahoo allows for
+ *  that range). Zooming with the wheel works within whatever is loaded here. */
+const RANGES = [
+  { key: '1d', label: '1D', range: '1d', interval: '5m', bars: '5-min' },
+  { key: '5d', label: '5D', range: '5d', interval: '15m', bars: '15-min' },
+  { key: '1mo', label: '1M', range: '1mo', interval: '1h', bars: 'hourly' },
+  { key: '3mo', label: '3M', range: '3mo', interval: '1d', bars: 'daily' },
+  { key: '6mo', label: '6M', range: '6mo', interval: '1d', bars: 'daily' },
+  { key: '1y', label: '1Y', range: '1y', interval: '1d', bars: 'daily' },
+  { key: '5y', label: '5Y', range: '5y', interval: '1wk', bars: 'weekly' },
+  { key: 'max', label: 'Max', range: 'max', interval: '1mo', bars: 'monthly' },
+] as const
+type RangeKey = (typeof RANGES)[number]['key']
+const DEFAULT_RANGE: RangeKey = '6mo'
+const rangeByKey = (k: string | null) => RANGES.find((r) => r.key === k)
+
+/** Indicators need this many bars before Run is enabled. */
+const MIN_BARS = 30
 
 /** Extra keywords to widen related-news matching (ticker → common names). */
 const NEWS_ALIASES: Record<string, string[]> = {
@@ -65,6 +86,10 @@ export function Statistics() {
   const [symbol, setSymbol] = useState<string>(params.get('symbol') ?? '')
   const [methodKey, setMethodKey] = useState<string>(params.get('method') ?? 'ema_cross')
   const [horizon, setHorizon] = useState<number>(86_400)
+  const [rangeKey, setRangeKey] = useState<RangeKey>(
+    rangeByKey(params.get('range'))?.key ?? DEFAULT_RANGE,
+  )
+  const rangeDef = rangeByKey(rangeKey) ?? RANGES[4]
 
   const instruments = instrumentsFor(group, market)
   const symbols = useMemo(() => {
@@ -82,32 +107,38 @@ export function Statistics() {
     { state: 'idle', msg: '' },
   )
 
-  // load history whenever the instrument changes
+  // chart interaction shared by the price and volume panes: the visible
+  // time window (wheel / drag / buttons) and the hovered bar (crosshair)
+  const view = useChartView(candles.length)
+  const [hoverIdx, setHoverIdx] = useState<number | null>(null)
+
+  // load history whenever the instrument or time range changes
   useEffect(() => {
     if (!activeSymbol) return
     let cancelled = false
     setLoading(true)
     setError(null)
     setResult(null)
+    setHoverIdx(null)
     setSave({ state: 'idle', msg: '' })
-    fetchHistory(activeSymbol, GROUP_META[group].apiGroup)
+    fetchHistory(activeSymbol, GROUP_META[group].apiGroup, rangeDef.range, rangeDef.interval)
       .then((r) => !cancelled && setCandles(r.candles))
       .catch((e) => !cancelled && setError(String(e?.message ?? e)))
       .finally(() => !cancelled && setLoading(false))
     return () => {
       cancelled = true
     }
-  }, [activeSymbol, group])
+  }, [activeSymbol, group, rangeDef.range, rangeDef.interval])
 
   // keep the URL in sync so Home deep-links and refresh work
   useEffect(() => {
-    const p: Record<string, string> = { group, method: methodKey }
+    const p: Record<string, string> = { group, method: methodKey, range: rangeKey }
     if (activeSymbol) p.symbol = activeSymbol
     setParams(p, { replace: true })
-  }, [group, methodKey, activeSymbol, setParams])
+  }, [group, methodKey, rangeKey, activeSymbol, setParams])
 
   const method = methodByKey(methodKey)
-  const canRun = !!method && candles.length >= 30
+  const canRun = !!method && candles.length >= MIN_BARS
   const runAnalysis = () => method && canRun && setResult(method.run(candles))
 
   const savePrediction = async () => {
@@ -142,9 +173,11 @@ export function Statistics() {
 
   const lastClose = candles.length ? candles[candles.length - 1].close : undefined
 
-  // buying vs selling pressure: volume on up-days vs down-days (proxy for order flow)
-  const buyVol = candles.reduce((s, c) => s + (c.close >= c.open ? c.volume ?? 0 : 0), 0)
-  const sellVol = candles.reduce((s, c) => s + (c.close < c.open ? c.volume ?? 0 : 0), 0)
+  // buying vs selling pressure over the bars currently in view: volume on
+  // up-bars vs down-bars (proxy for order flow)
+  const visible = candles.slice(view.start, view.end)
+  const buyVol = visible.reduce((s, c) => s + (c.close >= c.open ? c.volume ?? 0 : 0), 0)
+  const sellVol = visible.reduce((s, c) => s + (c.close < c.open ? c.volume ?? 0 : 0), 0)
   const totalVol = buyVol + sellVol
 
   return (
@@ -216,6 +249,40 @@ export function Statistics() {
               <span className="tag">{GROUP_META[group].label}</span>
             )}
           </h3>
+
+          <div className="chart-toolbar">
+            <div className="seg" role="group" aria-label="time range">
+              {RANGES.map((r) => (
+                <button
+                  key={r.key}
+                  type="button"
+                  className={r.key === rangeKey ? 'active' : ''}
+                  onClick={() => setRangeKey(r.key)}
+                  title={`${r.label} · ${r.bars} bars`}
+                >
+                  {r.label}
+                </button>
+              ))}
+            </div>
+            <span className="zoom-hint">wheel: zoom · drag: pan · double-click: reset</span>
+            <div className="seg" role="group" aria-label="zoom">
+              <button type="button" onClick={view.zoomOut} disabled={!view.zoomed} title="zoom out">
+                −
+              </button>
+              <button
+                type="button"
+                onClick={view.zoomIn}
+                disabled={candles.length <= 8}
+                title="zoom in"
+              >
+                +
+              </button>
+              <button type="button" onClick={view.reset} disabled={!view.zoomed} title="show all">
+                ⟲
+              </button>
+            </div>
+          </div>
+
           {loading ? (
             <div className="skeleton" style={{ height: 280 }} />
           ) : error ? (
@@ -226,10 +293,17 @@ export function Statistics() {
                 {lastClose !== undefined ? fmtPrice(lastClose) : '—'}
                 <span className="stat-price-sub">
                   {' '}
-                  · {candles.length} bars · daily
+                  · {candles.length} bars · {rangeDef.bars}
+                  {view.zoomed ? ` · viewing ${view.end - view.start}` : ''}
                 </span>
               </div>
-              <PriceChart candles={candles} overlays={result?.overlays ?? []} />
+              <PriceChart
+                candles={candles}
+                overlays={result?.overlays ?? []}
+                view={view}
+                hoverIdx={hoverIdx}
+                onHover={setHoverIdx}
+              />
               {result && (
                 <div className="stat-legend">
                   {(result.overlays ?? []).map((o) => (
@@ -242,18 +316,18 @@ export function Statistics() {
               {totalVol > 0 ? (
                 <div className="vol-section">
                   <div className="vol-head">
-                    <span>Volume · buying vs selling pressure</span>
+                    <span>Volume · buying vs selling pressure{view.zoomed ? ' (in view)' : ''}</span>
                     <span>
                       <span className="delta-up">▲ {fmtCompact(buyVol)}</span>{' '}
                       <span className="delta-down">▼ {fmtCompact(sellVol)}</span>
                     </span>
                   </div>
-                  <div className="vol-split" title={`${Math.round((buyVol / totalVol) * 100)}% up-day volume`}>
+                  <div className="vol-split" title={`${Math.round((buyVol / totalVol) * 100)}% up-bar volume`}>
                     <div className="vol-split-buy" style={{ width: `${(buyVol / totalVol) * 100}%` }} />
                   </div>
-                  <VolumeBars candles={candles} />
+                  <VolumeBars candles={candles} view={view} hoverIdx={hoverIdx} onHover={setHoverIdx} />
                   <div className="vol-note">
-                    Up-day volume (green) vs down-day volume (red) — a proxy for order
+                    Up-bar volume (green) vs down-bar volume (red) — a proxy for order
                     flow; free data has no true buy/sell tape.
                   </div>
                 </div>
@@ -268,7 +342,11 @@ export function Statistics() {
           </h3>
           {!result ? (
             <div className="empty">
-              {canRun ? 'Press Run to analyse.' : 'Loading enough history to analyse…'}
+              {loading
+                ? 'Loading history…'
+                : candles.length < MIN_BARS
+                  ? `Need at least ${MIN_BARS} bars to analyse (${candles.length} loaded) — pick a longer range.`
+                  : 'Press Run to analyse.'}
             </div>
           ) : (
             <>
